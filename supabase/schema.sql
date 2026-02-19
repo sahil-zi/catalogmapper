@@ -141,3 +141,11 @@ CREATE POLICY "auth_write_session_rows" ON session_rows FOR ALL TO authenticated
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', false);
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('marketplace-templates', 'marketplace-templates', false);
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('generated', 'generated', false);
+
+-- ─────────────────────────────────────────────
+-- MIGRATIONS
+-- ─────────────────────────────────────────────
+
+-- Add category support (run once)
+ALTER TABLE marketplace_fields ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS category TEXT;

@@ -15,6 +15,7 @@ export default function NewMarketplacePage() {
   const [displayName, setDisplayName] = useState('');
   const [name, setName] = useState('');
   const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [categoryName, setCategoryName] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -44,6 +45,7 @@ export default function NewMarketplacePage() {
       if (templateFile) {
         const formData = new FormData();
         formData.append('file', templateFile);
+        if (categoryName.trim()) formData.append('category', categoryName.trim());
         const tRes = await fetch(`/api/admin/marketplaces/${marketplaceId}/template`, {
           method: 'POST',
           body: formData,
@@ -118,6 +120,23 @@ export default function NewMarketplacePage() {
                 extracted as fields.
               </p>
             </div>
+
+            {templateFile && (
+              <div className="space-y-2">
+                <Label htmlFor="categoryName">Category Name (optional)</Label>
+                <Input
+                  id="categoryName"
+                  placeholder="e.g. Electronics, Clothing, Home & Garden"
+                  value={categoryName}
+                  onChange={(e) => setCategoryName(e.target.value)}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tag this template with a category. Upload multiple templates with different
+                  categories to support different product types.
+                </p>
+              </div>
+            )}
 
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? 'Creating...' : 'Create Marketplace'}

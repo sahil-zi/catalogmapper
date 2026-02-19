@@ -12,6 +12,7 @@ export async function POST(
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const category = (formData.get('category') as string | null) || null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -42,8 +43,16 @@ export async function POST(
       .update({ template_file_path: storagePath })
       .eq('id', marketplaceId);
 
-    // Delete existing fields
-    await supabase.from('marketplace_fields').delete().eq('marketplace_id', marketplaceId);
+    // Delete existing fields scoped to category (or all if no category)
+    const deleteQuery = supabase
+      .from('marketplace_fields')
+      .delete()
+      .eq('marketplace_id', marketplaceId);
+    if (category) {
+      await deleteQuery.eq('category', category);
+    } else {
+      await deleteQuery;
+    }
 
     // Insert extracted fields
     const fieldRows = parsed.columns.map((col, idx) => ({
@@ -53,6 +62,7 @@ export async function POST(
       is_required: false,
       sample_values: col.sample_values,
       field_order: idx,
+      category,
     }));
 
     const { data: fields, error: fieldsError } = await supabase

@@ -55,7 +55,12 @@ export default function MapPage() {
           `/api/admin/marketplaces/${sessionData.session.marketplace_id}/fields`
         );
         const fieldsData = await fieldsRes.json();
-        setFields(fieldsData.fields ?? []);
+        const allFields = fieldsData.fields ?? [];
+        const sessionCategory = sessionData.session?.category ?? null;
+        const filtered = sessionCategory
+          ? allFields.filter((f: MarketplaceField) => f.category === sessionCategory)
+          : allFields;
+        setFields(filtered);
       }
     } catch (err: any) {
       toast.error('Failed to load session: ' + err.message);
@@ -134,6 +139,7 @@ export default function MapPage() {
           <h1 className="text-2xl font-bold">Field Mapping</h1>
           <p className="text-muted-foreground text-sm">
             {session?.original_filename} → {session?.marketplace?.display_name}
+            {session?.category ? ` · ${session.category}` : ''}
           </p>
         </div>
       </div>
@@ -157,6 +163,7 @@ export default function MapPage() {
               existingMappings={mappings}
               onSave={handleSave}
               saving={saving}
+              category={session.category}
             />
           ) : (
             <p className="text-muted-foreground text-sm">

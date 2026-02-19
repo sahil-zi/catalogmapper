@@ -19,6 +19,7 @@ export interface MarketplaceField {
   description: string | null;
   sample_values: string[] | null;
   field_order: number | null;
+  category: string | null;
   created_at: string;
 }
 
@@ -30,6 +31,7 @@ export interface UploadSession {
   status: SessionStatus;
   row_count: number | null;
   user_columns: UserColumn[] | null;
+  category: string | null;
   created_at: string;
   updated_at: string;
   // joined

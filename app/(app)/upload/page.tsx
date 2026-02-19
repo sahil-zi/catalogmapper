@@ -9,7 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import type { Marketplace } from '@/lib/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { Marketplace, MarketplaceField } from '@/lib/types';
 import { ArrowRight } from 'lucide-react';
 
 type Step = 'select' | 'uploading' | 'mapping';
@@ -18,6 +25,8 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [marketplaceId, setMarketplaceId] = useState('');
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [category, setCategory] = useState('');
   const [step, setStep] = useState<Step>('select');
   const [progress, setProgress] = useState(0);
   const router = useRouter();
@@ -28,9 +37,31 @@ export default function UploadPage() {
       .then((d) => setMarketplaces(d.marketplaces ?? []));
   }, []);
 
+  useEffect(() => {
+    if (!marketplaceId) {
+      setCategories([]);
+      setCategory('');
+      return;
+    }
+    fetch(`/api/admin/marketplaces/${marketplaceId}/fields`)
+      .then((r) => r.json())
+      .then((d) => {
+        const cats = [
+          ...new Set(
+            (d.fields ?? [])
+              .map((f: MarketplaceField) => f.category)
+              .filter((c: string | null): c is string => Boolean(c))
+          ),
+        ] as string[];
+        setCategories(cats);
+        setCategory(cats.length === 1 ? cats[0] : '');
+      });
+  }, [marketplaceId]);
+
   async function handleSubmit() {
     if (!file) return toast.error('Please select a file');
     if (!marketplaceId) return toast.error('Please select a marketplace');
+    if (categories.length > 0 && !category) return toast.error('Please select a category');
 
     setStep('uploading');
     setProgress(20);
@@ -52,7 +83,7 @@ export default function UploadPage() {
       const mapRes = await fetch(`/api/sessions/${sessionId}/marketplace`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marketplace_id: marketplaceId }),
+        body: JSON.stringify({ marketplace_id: marketplaceId, category: category || null }),
       });
 
       if (!mapRes.ok) {
@@ -117,6 +148,24 @@ export default function UploadPage() {
               />
             )}
           </div>
+
+          {categories.length > 0 && (
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={category} onValueChange={setCategory} disabled={isUploading}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {isUploading && (
             <div className="space-y-2">

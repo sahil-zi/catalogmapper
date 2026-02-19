@@ -9,16 +9,16 @@ export async function POST(
   try {
     const { id: sessionId } = await params;
     const supabase = createServiceClient();
-    const { marketplace_id } = await request.json();
+    const { marketplace_id, category } = await request.json();
 
     if (!marketplace_id) {
       return NextResponse.json({ error: 'marketplace_id required' }, { status: 400 });
     }
 
-    // Update session with marketplace
+    // Update session with marketplace and category
     const { data: session, error: sessionError } = await supabase
       .from('upload_sessions')
-      .update({ marketplace_id, status: 'mapped' })
+      .update({ marketplace_id, category: category ?? null, status: 'mapped' })
       .eq('id', sessionId)
       .select()
       .single();
@@ -34,11 +34,15 @@ export async function POST(
       .eq('id', marketplace_id)
       .single();
 
-    const { data: fields } = await supabase
+    let fieldsQuery = supabase
       .from('marketplace_fields')
       .select('*')
       .eq('marketplace_id', marketplace_id)
       .order('field_order');
+    if (category) {
+      fieldsQuery = fieldsQuery.eq('category', category);
+    }
+    const { data: fields } = await fieldsQuery;
 
     if (!fields || !marketplace) {
       return NextResponse.json({ error: 'Marketplace not found' }, { status: 404 });

@@ -4,7 +4,10 @@ import { useState } from 'react';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -12,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn, getConfidenceColor } from '@/lib/utils';
 import type { UserColumn, MarketplaceField, FieldMapping } from '@/lib/types';
-import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Sparkles, Tag } from 'lucide-react';
 
 interface MappingRow {
   userColumn: UserColumn;
@@ -29,6 +32,7 @@ interface FieldMapperProps {
   existingMappings: FieldMapping[];
   onSave: (mappings: MappingRow[]) => Promise<void>;
   saving?: boolean;
+  category?: string | null;
 }
 
 const NONE_VALUE = '__none__';
@@ -39,6 +43,7 @@ export function FieldMapper({
   existingMappings,
   onSave,
   saving,
+  category,
 }: FieldMapperProps) {
   const [mappings, setMappings] = useState<MappingRow[]>(() => {
     const byColumn = new Map(existingMappings.map((m) => [m.user_column, m]));
@@ -56,6 +61,7 @@ export function FieldMapper({
   });
 
   const requiredFields = marketplaceFields.filter((f) => f.is_required);
+  const optionalFields = marketplaceFields.filter((f) => !f.is_required);
   const mappedFieldIds = new Set(mappings.map((m) => m.selectedFieldId).filter(Boolean));
 
   const unmappedRequired = requiredFields.filter((f) => !mappedFieldIds.has(f.id));
@@ -78,7 +84,16 @@ export function FieldMapper({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {category && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-md text-sm">
+          <Tag className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+          <span className="text-blue-700">
+            Category: <span className="font-medium">{category}</span>
+          </span>
+        </div>
+      )}
+
       {unmappedRequired.length > 0 && (
         <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
           <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
@@ -100,7 +115,7 @@ export function FieldMapper({
             <tr>
               <th className="text-left py-3 px-4 font-medium w-1/3">Your Column</th>
               <th className="text-left py-3 px-4 font-medium text-muted-foreground text-xs">Sample Values</th>
-              <th className="text-left py-3 px-4 font-medium w-1/3">Marketplace Field</th>
+              <th className="text-left py-3 px-4 font-medium w-2/5">Marketplace Field</th>
               <th className="text-left py-3 px-4 font-medium w-20">Match</th>
             </tr>
           </thead>
@@ -108,17 +123,11 @@ export function FieldMapper({
             {mappings.map((row) => {
               const isMapped = !!row.selectedFieldId;
               const mappedField = marketplaceFields.find((f) => f.id === row.selectedFieldId);
-              const isRequired = mappedField?.is_required;
 
               return (
                 <tr key={row.userColumn.name} className="hover:bg-muted/30 transition-colors">
                   <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{row.userColumn.name}</span>
-                      {isRequired && (
-                        <span className="text-xs text-red-500 font-medium">*</span>
-                      )}
-                    </div>
+                    <span className="font-medium">{row.userColumn.name}</span>
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">
                     <span className="truncate block max-w-[200px]">
@@ -126,31 +135,72 @@ export function FieldMapper({
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <Select
-                      value={row.selectedFieldId ?? NONE_VALUE}
-                      onValueChange={(val) =>
-                        updateMapping(row.userColumn.name, val === NONE_VALUE ? null : val)
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="— not mapped —" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE_VALUE}>— not mapped —</SelectItem>
-                        {marketplaceFields.map((field) => (
-                          <SelectItem
-                            key={field.id}
-                            value={field.id}
-                            disabled={
-                              mappedFieldIds.has(field.id) && field.id !== row.selectedFieldId
-                            }
-                          >
-                            {field.field_name}
-                            {field.is_required ? ' *' : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={row.selectedFieldId ?? NONE_VALUE}
+                        onValueChange={(val) =>
+                          updateMapping(row.userColumn.name, val === NONE_VALUE ? null : val)
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs flex-1">
+                          <SelectValue placeholder="— not mapped —" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NONE_VALUE}>— not mapped —</SelectItem>
+                          {requiredFields.length > 0 && (
+                            <>
+                              <SelectSeparator />
+                              <SelectGroup>
+                                <SelectLabel className="text-red-600">Required</SelectLabel>
+                                {requiredFields.map((field) => (
+                                  <SelectItem
+                                    key={field.id}
+                                    value={field.id}
+                                    disabled={
+                                      mappedFieldIds.has(field.id) && field.id !== row.selectedFieldId
+                                    }
+                                  >
+                                    {field.field_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </>
+                          )}
+                          {optionalFields.length > 0 && (
+                            <>
+                              <SelectSeparator />
+                              <SelectGroup>
+                                <SelectLabel>Optional</SelectLabel>
+                                {optionalFields.map((field) => (
+                                  <SelectItem
+                                    key={field.id}
+                                    value={field.id}
+                                    disabled={
+                                      mappedFieldIds.has(field.id) && field.id !== row.selectedFieldId
+                                    }
+                                  >
+                                    {field.field_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {isMapped && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-xs flex-shrink-0',
+                            mappedField?.is_required
+                              ? 'border-red-200 text-red-600 bg-red-50'
+                              : 'border-gray-200 text-gray-500 bg-gray-50'
+                          )}
+                        >
+                          {mappedField?.is_required ? 'Required' : 'Optional'}
+                        </Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     {isMapped && row.aiSuggested && row.aiConfidence !== null ? (
@@ -175,7 +225,6 @@ export function FieldMapper({
         <p className="text-xs text-muted-foreground">
           <Sparkles className="h-3 w-3 inline mr-1" />
           AI-suggested mappings are pre-filled. Change any dropdown to override.
-          <span className="ml-2 text-red-500">* required field</span>
         </p>
         <Button onClick={() => onSave(mappings)} disabled={saving}>
           {saving ? 'Saving...' : 'Save & Generate'}

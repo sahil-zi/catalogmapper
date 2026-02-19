@@ -21,6 +21,7 @@ export default function MarketplaceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [templateCategory, setTemplateCategory] = useState('');
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
 
   async function loadData() {
@@ -74,6 +75,7 @@ export default function MarketplaceDetailPage() {
     try {
       const formData = new FormData();
       formData.append('file', templateFile);
+      if (templateCategory.trim()) formData.append('category', templateCategory.trim());
       const res = await fetch(`/api/admin/marketplaces/${marketplaceId}/template`, {
         method: 'POST',
         body: formData,
@@ -82,6 +84,7 @@ export default function MarketplaceDetailPage() {
       if (!res.ok) throw new Error(data.error);
       toast.success(`Template uploaded: ${data.columnCount} fields extracted`);
       setTemplateFile(null);
+      setTemplateCategory('');
       loadData();
     } catch (err: any) {
       toast.error(err.message);
@@ -135,7 +138,7 @@ export default function MarketplaceDetailPage() {
 
       {/* Template upload */}
       <Card className="mb-4">
-        <CardHeader><CardTitle className="text-base">Update Template</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Upload Template</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <UploadZone
             onFileSelect={setTemplateFile}
@@ -143,6 +146,22 @@ export default function MarketplaceDetailPage() {
             onClear={() => setTemplateFile(null)}
             disabled={uploadingTemplate}
           />
+          {templateFile && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Category Name (optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. Electronics, Clothing"
+                value={templateCategory}
+                onChange={(e) => setTemplateCategory(e.target.value)}
+                disabled={uploadingTemplate}
+                className="w-full border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground">
+                If set, only fields with this category are replaced. Leave blank to replace all fields.
+              </p>
+            </div>
+          )}
           <Button
             onClick={handleTemplateUpload}
             disabled={!templateFile || uploadingTemplate}
@@ -177,6 +196,9 @@ export default function MarketplaceDetailPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{field.field_name}</span>
+                      {field.category && (
+                        <Badge variant="secondary" className="text-xs">{field.category}</Badge>
+                      )}
                       {field.sample_values && field.sample_values.length > 0 && (
                         <span className="text-xs text-muted-foreground truncate max-w-[200px]">
                           e.g. {field.sample_values.slice(0, 2).join(', ')}
