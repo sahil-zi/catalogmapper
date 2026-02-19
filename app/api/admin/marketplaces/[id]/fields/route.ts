@@ -68,7 +68,24 @@ export async function DELETE(
 ) {
   const { id: marketplaceId } = await params;
   const supabase = createServiceClient();
+  const category = request.nextUrl.searchParams.get('category');
 
+  if (category) {
+    // Delete only fields belonging to the specified category
+    const query = supabase
+      .from('marketplace_fields')
+      .delete()
+      .eq('marketplace_id', marketplaceId);
+
+    const { error } = category === 'Default'
+      ? await query.is('category', null)
+      : await query.eq('category', category);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  // No category → delete the entire marketplace record
   const { error } = await supabase
     .from('marketplaces')
     .delete()

@@ -5,11 +5,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Upload, Settings, LogOut, Map } from 'lucide-react';
+import { LayoutDashboard, Upload, Settings, LogOut, Map, List } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/upload', label: 'New Export', icon: Upload },
+  { href: '/skus', label: 'SKU Review', icon: List },
   { href: '/admin/marketplaces', label: 'Marketplaces', icon: Settings },
 ];
 

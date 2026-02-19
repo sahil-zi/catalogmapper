@@ -12,17 +12,24 @@ import { toast } from 'sonner';
 import type { Marketplace, MarketplaceField } from '@/lib/types';
 import { ArrowLeft, Save, Trash2, Upload } from 'lucide-react';
 
+interface CategoryEntry {
+  category: string; // 'Default' for null
+  count: number;
+}
+
 export default function MarketplaceDetailPage() {
   const { id: marketplaceId } = useParams<{ id: string }>();
   const router = useRouter();
 
   const [marketplace, setMarketplace] = useState<Marketplace | null>(null);
   const [fields, setFields] = useState<MarketplaceField[]>([]);
+  const [categories, setCategories] = useState<CategoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [templateCategory, setTemplateCategory] = useState('');
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
 
   async function loadData() {
     const [mpRes, fieldsRes] = await Promise.all([
@@ -34,7 +41,21 @@ export default function MarketplaceDetailPage() {
 
     const mp = (mpData.marketplaces ?? []).find((m: Marketplace) => m.id === marketplaceId);
     setMarketplace(mp ?? null);
-    setFields(fieldsData.fields ?? []);
+
+    const allFields: MarketplaceField[] = fieldsData.fields ?? [];
+    setFields(allFields);
+
+    // Derive distinct categories from fields
+    const catMap = new Map<string, number>();
+    for (const f of allFields) {
+      const key = f.category ?? 'Default';
+      catMap.set(key, (catMap.get(key) ?? 0) + 1);
+    }
+    const catEntries: CategoryEntry[] = Array.from(catMap.entries()).map(([category, count]) => ({
+      category,
+      count,
+    }));
+    setCategories(catEntries);
     setLoading(false);
   }
 
@@ -93,7 +114,7 @@ export default function MarketplaceDetailPage() {
     }
   }
 
-  async function handleDelete() {
+  async function handleDeleteMarketplace() {
     if (!confirm(`Delete ${marketplace?.display_name}? This cannot be undone.`)) return;
     const res = await fetch(`/api/admin/marketplaces/${marketplaceId}/fields`, { method: 'DELETE' });
     if (res.ok) {
@@ -101,6 +122,22 @@ export default function MarketplaceDetailPage() {
       router.push('/admin/marketplaces');
     } else {
       toast.error('Delete failed');
+    }
+  }
+
+  async function handleDeleteCategory(category: string) {
+    if (!confirm(`Delete all fields in category "${category}"? This cannot be undone.`)) return;
+    setDeletingCategory(category);
+    try {
+      const url = `/api/admin/marketplaces/${marketplaceId}/fields?category=${encodeURIComponent(category)}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+      toast.success(`Category "${category}" deleted`);
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDeletingCategory(null);
     }
   }
 
@@ -129,16 +166,49 @@ export default function MarketplaceDetailPage() {
         <Button
           variant="destructive"
           size="sm"
-          onClick={handleDelete}
+          onClick={handleDeleteMarketplace}
         >
           <Trash2 className="h-4 w-4 mr-1" />
-          Delete
+          Delete Marketplace
         </Button>
       </div>
 
-      {/* Template upload */}
+      {/* Section 1: Uploaded Templates */}
       <Card className="mb-4">
-        <CardHeader><CardTitle className="text-base">Upload Template</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Uploaded Templates</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          {categories.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground text-sm">
+              No templates uploaded yet.
+            </div>
+          ) : (
+            <div className="divide-y">
+              {categories.map(({ category, count }) => (
+                <div key={category} className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="secondary">{category}</Badge>
+                    <span className="text-sm text-muted-foreground">{count} fields</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDeleteCategory(category)}
+                    disabled={deletingCategory === category}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    {deletingCategory === category ? 'Deleting...' : 'Delete'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 2: Upload New Template */}
+      <Card className="mb-4">
+        <CardHeader><CardTitle className="text-base">Upload New Template</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <UploadZone
             onFileSelect={setTemplateFile}
@@ -173,7 +243,7 @@ export default function MarketplaceDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Fields table */}
+      {/* Section 3: Fields */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

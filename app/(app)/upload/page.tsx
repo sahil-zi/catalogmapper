@@ -116,12 +116,9 @@ export default function UploadPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Step 1: Upload & Select</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           <div className="space-y-2">
-            <Label>Product file</Label>
+            <Label className="text-sm font-semibold">Step 1: Upload your catalog file</Label>
             <UploadZone
               onFileSelect={setFile}
               selectedFile={file}
@@ -131,7 +128,7 @@ export default function UploadPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Target marketplace</Label>
+            <Label className="text-sm font-semibold">Step 2: Select target marketplace</Label>
             {marketplaces.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No marketplaces configured.{' '}
@@ -151,7 +148,7 @@ export default function UploadPage() {
 
           {categories.length > 0 && (
             <div className="space-y-2">
-              <Label>Category</Label>
+              <Label className="text-sm font-semibold">Step 3: Select category</Label>
               <Select value={category} onValueChange={setCategory} disabled={isUploading}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a category" />
