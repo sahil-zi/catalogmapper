@@ -1,0 +1,1 @@
+export { parseFileBuffer } from './xlsx';
